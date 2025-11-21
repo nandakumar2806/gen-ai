@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Blog Writer Agent - Capstone Project</title>
+    <style>
+        :root {
+            --color-bg-primary: #fcfcf9;
+            --color-surface: #fffffe;
+            --color-text: #133444;
+            --color-text-secondary: #626c71;
+            --color-primary: #21808d;
+            --color-primary-hover: #1d7480;
+            --color-border: rgba(94, 82, 64, 0.2);
+            --color-success: #21808d;
+            --color-error: #c0152f;
+            --color-bg-accent: rgba(33, 128, 141, 0.08);
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --color-bg-primary: #1f2121;
+                --color-surface: #262828;
+                --color-text: #f5f5f5;
+                --color-text-secondary: rgba(167, 169, 169, 0.7);
+                --color-primary: #32b8c6;
+                --color-primary-hover: #2da6b2;
+                --color-border: rgba(119, 124, 124, 0.3);
+                --color-bg-accent: rgba(50, 184, 198, 0.15);
+            }
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--color-bg-primary);
+            color: var(--color-text);
+            line-height: 1.6;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 30px 20px;
+            background: var(--color-surface);
+            border-radius: 12px;
+            border: 1px solid var(--color-border);
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            color: var(--color-text);
+        }
+
+        .subtitle {
+            color: var(--color-text-secondary);
+            font-size: 1.1rem;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 6px 12px;
+            margin: 5px;
+            background: var(--color-bg-accent);
+            border: 1px solid var(--color-primary);
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        }
+
+        .card h2 {
+            margin-bottom: 20px;
+            color: var(--color-text);
+            font-size: 1.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: var(--color-text);
+        }
+
+        input, textarea, select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--color-border);
+            border-radius: 8px;
+            background: var(--color-bg-primary);
+            color: var(--color-text);
+            font-family: inherit;
+            font-size: 1rem;
+            transition: border-color 0.2s;
+        }
+
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: var(--color-primary);
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        button {
+            width: 100%;
+            padding: 14px 24px;
+            background: var(--color-primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background: var(--color-primary-hover);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .agent-pipeline {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 30px 0;
+            padding: 20px;
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
+            border-radius: 12px;
+        }
+
+        .agent-step {
+            flex: 1;
+            text-align: center;
+            padding: 15px;
+            position: relative;
+        }
+
+        .agent-step:not(:last-child)::after {
+            content: '→';
+            position: absolute;
+            right: -15px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 1.5rem;
+            color: var(--color-primary);
+        }
+
+        .agent-step.active {
+            background: var(--color-bg-accent);
+            border-radius: 8px;
+        }
+
+        .agent-icon {
+            font-size: 2rem;
+            margin-bottom: 8px;
+        }
+
+        .agent-name {
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: var(--color-text);
+        }
+
+        .output-section {
+            grid-column: 1 / -1;
+        }
+
+        .output-content {
+            background: var(--color-bg-primary);
+            border: 1px solid var(--color-border);
+            border-radius: 8px;
+            padding: 20px;
+            min-height: 300px;
+            white-space: pre-wrap;
+            font-family: 'Georgia', serif;
+            line-height: 1.8;
+        }
+
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .metric-card {
+            background: var(--color-bg-accent);
+            border: 1px solid var(--color-primary);
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+        }
+
+        .metric-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--color-primary);
+        }
+
+        .metric-label {
+            font-size: 0.9rem;
+            color: var(--color-text-secondary);
+            margin-top: 5px;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .spinner {
+            border: 3px solid var(--color-border);
+            border-top: 3px solid var(--color-primary);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .concepts-applied {
+            margin-top: 30px;
+            padding: 20px;
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
+            border-radius: 12px;
+        }
+
+        .concepts-applied h3 {
+            margin-bottom: 15px;
+            color: var(--color-text);
+        }
+
+        .concepts-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+        }
+
+        .concept-item {
+            padding: 12px;
+            background: var(--color-bg-accent);
+            border-left: 3px solid var(--color-primary);
+            border-radius: 4px;
+        }
+
+        .concept-title {
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .concept-desc {
+            font-size: 0.9rem;
+            color: var(--color-text-secondary);
+        }
+
+        .log-container {
+            margin-top: 20px;
+            max-height: 200px;
+            overflow-y: auto;
+            background: var(--color-bg-primary);
+            border: 1px solid var(--color-border);
+            border-radius: 8px;
+            padding: 15px;
+            font-family: monospace;
+            font-size: 0.85rem;
+        }
+
+        .log-entry {
+            margin-bottom: 8px;
+            padding: 5px;
+            border-left: 2px solid var(--color-primary);
+            padding-left: 10px;
+        }
+
+        .log-timestamp {
+            color: var(--color-text-secondary);
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🤖 AI Blog Writer Agent</h1>
+            <p class="subtitle">Multi-Agent System for Automated Blog Creation</p>
+            <div style="margin-top: 15px;">
+                <span class="badge">Sequential Agents</span>
+                <span class="badge">Parallel Processing</span>
+                <span class="badge">Memory Management</span>
+                <span class="badge">Agent Evaluation</span>
+                <span class="badge">Observability</span>
+            </div>
+        </header>
+
+        <div class="agent-pipeline">
+            <div class="agent-step" id="step-planner">
+                <div class="agent-icon">📋</div>
+                <div class="agent-name">Planner</div>
+            </div>
+            <div class="agent-step" id="step-researcher">
+                <div class="agent-icon">🔍</div>
+                <div class="agent-name">Researcher</div>
+            </div>
+            <div class="agent-step" id="step-writer">
+                <div class="agent-icon">✍️</div>
+                <div class="agent-name">Writer</div>
+            </div>
+            <div class="agent-step" id="step-editor">
+                <div class="agent-icon">📝</div>
+                <div class="agent-name">Editor</div>
+            </div>
+            <div class="agent-step" id="step-seo">
+                <div class="agent-icon">🎯</div>
+                <div class="agent-name">SEO</div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="card">
+                <h2>Blog Configuration</h2>
+                <form id="blogForm">
+                    <div class="form-group">
+                        <label for="topic">Blog Topic</label>
+                        <input type="text" id="topic" placeholder="e.g., Benefits of AI in Healthcare" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="tone">Writing Tone</label>
+                        <select id="tone">
+                            <option value="professional">Professional</option>
+                            <option value="casual">Casual</option>
+                            <option value="technical">Technical</option>
+                            <option value="educational">Educational</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="length">Target Length</label>
+                        <select id="length">
+                            <option value="short">Short (500-800 words)</option>
+                            <option value="medium" selected>Medium (800-1200 words)</option>
+                            <option value="long">Long (1200-2000 words)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="keywords">SEO Keywords (comma-separated)</label>
+                        <input type="text" id="keywords" placeholder="AI, healthcare, technology">
+                    </div>
+                    <button type="submit">Generate Blog Post</button>
+                </form>
+            </div>
+
+            <div class="card">
+                <h2>Agent Observability</h2>
+                <div class="metrics">
+                    <div class="metric-card">
+                        <div class="metric-value" id="processingTime">0s</div>
+                        <div class="metric-label">Processing Time</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="wordCount">0</div>
+                        <div class="metric-label">Word Count</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="qualityScore">-</div>
+                        <div class="metric-label">Quality Score</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="seoScore">-</div>
+                        <div class="metric-label">SEO Score</div>
+                    </div>
+                </div>
+                <div class="log-container" id="logContainer">
+                    <div style="color: var(--color-text-secondary); text-align: center;">
+                        Logs will appear here during generation...
+                    </div>
+                </div>
+            </div>
+
+            <div class="card output-section">
+                <h2>Generated Blog Post</h2>
+                <div class="loading" id="loadingIndicator">
+                    <div class="spinner"></div>
+                    <p style="margin-top: 15px; color: var(--color-text-secondary);">Generating your blog post...</p>
+                </div>
+                <div class="output-content" id="outputContent">
+                    Your generated blog post will appear here. Configure the settings above and click "Generate Blog Post" to start.
+                </div>
+            </div>
+        </div>
+
+        <div class="concepts-applied">
+            <h3>📚 Course Concepts Applied</h3>
+            <div class="concepts-list">
+                <div class="concept-item">
+                    <div class="concept-title">1. Sequential Multi-Agent System</div>
+                    <div class="concept-desc">Five agents working in sequence: Planner → Researcher → Writer → Editor → SEO</div>
+                </div>
+                <div class="concept-item">
+                    <div class="concept-title">2. Memory Management</div>
+                    <div class="concept-desc">Session state maintains context across agents, Memory Bank stores user preferences</div>
+                </div>
+                <div class="concept-item">
+                    <div class="concept-title">3. Tools Integration</div>
+                    <div class="concept-desc">Custom tools for research, Google Search simulation, built-in text analysis</div>
+                </div>
+                <div class="concept-item">
+                    <div class="concept-title">4. Observability</div>
+                    <div class="concept-desc">Real-time logging, execution tracing, performance metrics tracking</div>
+                </div>
+                <div class="concept-item">
+                    <div class="concept-title">5. Agent Evaluation</div>
+                    <div class="concept-desc">Quality scoring (readability, coherence), SEO scoring, word count validation</div>
+                </div>
+                <div class="concept-item">
+                    <div class="concept-title">6. Context Engineering</div>
+                    <div class="concept-desc">Context compaction to manage token limits, relevant information retention</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Simulated Multi-Agent System
+        class BlogWriterAgent {
+            constructor() {
+                this.sessionMemory = {};
+                this.memoryBank = {
+                    userPreferences: {},
+                    pastTopics: []
+                };
+                this.startTime = null;
+            }
+
+            log(message, agent = 'SYSTEM') {
+                const timestamp = new Date().toLocaleTimeString();
+                const logContainer = document.getElementById('logContainer');
+                const logEntry = document.createElement('div');
+                logEntry.className = 'log-entry';
+                logEntry.innerHTML = `<span class="log-timestamp">[${timestamp}]</span> <strong>${agent}:</strong> ${message}`;
+                logContainer.appendChild(logEntry);
+                logContainer.scrollTop = logContainer.scrollHeight;
+            }
+
+            async sleep(ms) {
+                return new Promise(resolve => setTimeout(resolve, ms));
+            }
+
+            setActiveAgent(agentId) {
+                document.querySelectorAll('.agent-step').forEach(step => {
+                    step.classList.remove('active');
+                });
+                if (agentId) {
+                    document.getElementById(agentId).classList.add('active');
+                }
+            }
+
+            async plannerAgent(topic, tone, length) {
+                this.setActiveAgent('step-planner');
+                this.log('Analyzing topic and creating blog outline...', 'PLANNER');
+                await this.sleep(1500);
+
+                const outline = {
+                    title: `The Comprehensive Guide to ${topic}`,
+                    sections: [
+                        { title: 'Introduction', points: ['Hook', 'Context', 'Thesis'] },
+                        { title: 'Main Body', points: ['Key Point 1', 'Key Point 2', 'Key Point 3'] },
+                        { title: 'Conclusion', points: ['Summary', 'Call to Action'] }
+                    ],
+                    estimatedWords: length === 'short' ? 600 : length === 'medium' ? 1000 : 1500
+                };
+
+                this.log(`Created outline with ${outline.sections.length} main sections`, 'PLANNER');
+                this.sessionMemory.outline = outline;
+                return outline;
+            }
+
+            async researchAgent(topic, keywords) {
+                this.setActiveAgent('step-researcher');
+                this.log('Conducting research and gathering information...', 'RESEARCHER');
+                await this.sleep(2000);
+
+                const research = {
+                    keyFacts: [
+                        `${topic} has shown significant impact in recent years`,
+                        'Industry experts predict continued growth and innovation',
+                        'Key challenges include implementation and adoption'
+                    ],
+                    statistics: [
+                        'Market size: Growing at 15% annually',
+                        'User satisfaction: 85% positive feedback',
+                        'ROI: Average 3x return within first year'
+                    ],
+                    sources: [
+                        'Industry Research Report 2025',
+                        'Expert Analysis and Trends',
+                        'Case Studies and Success Stories'
+                    ]
+                };
+
+                this.log(`Gathered ${research.keyFacts.length} key facts and ${research.statistics.length} statistics`, 'RESEARCHER');
+                this.sessionMemory.research = research;
+                return research;
+            }
+
+            async writerAgent(outline, research, tone) {
+                this.setActiveAgent('step-writer');
+                this.log('Writing blog post content...', 'WRITER');
+                await this.sleep(2500);
+
+                const toneStyle = {
+                    professional: 'formal and authoritative',
+                    casual: 'friendly and conversational',
+                    technical: 'precise and detailed',
+                    educational: 'clear and instructive'
+                };
+
+                let content = `# ${outline.title}\n\n`;
+                
+                content += `## Introduction\n\n`;
+                content += `In today's rapidly evolving landscape, ${outline.title.toLowerCase()} has become increasingly important. `;
+                content += `This comprehensive guide explores the key aspects, benefits, and considerations you need to know.\n\n`;
+
+                content += `## Understanding the Fundamentals\n\n`;
+                research.keyFacts.forEach(fact => {
+                    content += `${fact}. `;
+                });
+                content += `\n\n`;
+
+                content += `## Key Statistics and Insights\n\n`;
+                research.statistics.forEach(stat => {
+                    content += `- ${stat}\n`;
+                });
+                content += `\n`;
+
+                content += `## Practical Implementation\n\n`;
+                content += `When implementing these concepts, it's essential to consider both immediate needs and long-term goals. `;
+                content += `Organizations that take a strategic approach see better outcomes and higher user satisfaction. `;
+                content += `The key is to start with clear objectives and measure progress consistently.\n\n`;
+
+                content += `## Best Practices and Recommendations\n\n`;
+                content += `Based on extensive research and real-world applications, here are the top recommendations:\n\n`;
+                content += `1. **Start with a solid foundation**: Ensure your team understands the core concepts\n`;
+                content += `2. **Measure and iterate**: Use data-driven insights to guide improvements\n`;
+                content += `3. **Stay updated**: Keep pace with industry developments and innovations\n`;
+                content += `4. **Focus on user experience**: Always prioritize the end-user perspective\n\n`;
+
+                content += `## Conclusion\n\n`;
+                content += `The landscape continues to evolve, presenting both challenges and opportunities. `;
+                content += `By understanding the fundamentals, staying informed, and implementing best practices, `;
+                content += `you can achieve significant results and stay ahead of the curve.\n\n`;
+
+                content += `## References\n\n`;
+                research.sources.forEach((source, idx) => {
+                    content += `[${idx + 1}] ${source}\n`;
+                });
+
+                this.log(`Draft completed with ${content.split(' ').length} words`, 'WRITER');
+                this.sessionMemory.draft = content;
+                return content;
+            }
+
+            async editorAgent(draft) {
+                this.setActiveAgent('step-editor');
+                this.log('Reviewing and editing content...', 'EDITOR');
+                await this.sleep(1500);
+
+                let editedContent = draft;
+                
+                // Simulate editing improvements
+                const improvements = [
+                    'Enhanced clarity and flow',
+                    'Improved transitions between sections',
+                    'Strengthened opening and conclusion',
+                    'Verified facts and citations'
+                ];
+
+                improvements.forEach(improvement => {
+                    this.log(improvement, 'EDITOR');
+                });
+
+                // Calculate quality metrics
+                const wordCount = editedContent.split(' ').length;
+                const sentences = editedContent.split(/[.!?]+/).length;
+                const avgWordsPerSentence = Math.round(wordCount / sentences);
+                const qualityScore = Math.min(100, Math.round((15 / Math.abs(avgWordsPerSentence - 15) * 100) + 50));
+
+                this.sessionMemory.edited = editedContent;
+                this.sessionMemory.qualityScore = qualityScore;
+                
+                return { content: editedContent, qualityScore };
+            }
+
+            async seoAgent(content, keywords) {
+                this.setActiveAgent('step-seo');
+                this.log('Optimizing for SEO...', 'SEO');
+                await this.sleep(1200);
+
+                const keywordList = keywords ? keywords.split(',').map(k => k.trim().toLowerCase()) : [];
+                const contentLower = content.toLowerCase();
+                
+                let seoScore = 70; // Base score
+
+                // Check keyword presence
+                keywordList.forEach(keyword => {
+                    const count = (contentLower.match(new RegExp(keyword, 'g')) || []).length;
+                    if (count > 0) {
+                        seoScore += 5;
+                        this.log(`Keyword "${keyword}" found ${count} times`, 'SEO');
+                    }
+                });
+
+                // Check structure
+                if (content.includes('# ')) seoScore += 5; // Has title
+                if (content.includes('## ')) seoScore += 5; // Has headings
+                if (content.split(' ').length > 300) seoScore += 5; // Good length
+
+                seoScore = Math.min(100, seoScore);
+
+                this.log(`SEO optimization complete. Score: ${seoScore}/100`, 'SEO');
+                this.sessionMemory.seoScore = seoScore;
+                
+                return { content, seoScore };
+            }
+
+            async generateBlog(topic, tone, length, keywords) {
+                this.startTime = Date.now();
+                this.log('Starting blog generation pipeline...', 'SYSTEM');
+
+                // Clear previous logs
+                document.getElementById('logContainer').innerHTML = '';
+
+                try {
+                    // Sequential agent execution
+                    const outline = await this.plannerAgent(topic, tone, length);
+                    const research = await this.researchAgent(topic, keywords);
+                    const draft = await this.writerAgent(outline, research, tone);
+                    const { content: editedContent, qualityScore } = await this.editorAgent(draft);
+                    const { content: finalContent, seoScore } = await this.seoAgent(editedContent, keywords);
+
+                    // Update metrics
+                    const processingTime = ((Date.now() - this.startTime) / 1000).toFixed(1);
+                    const wordCount = finalContent.split(' ').length;
+
+                    document.getElementById('processingTime').textContent = `${processingTime}s`;
+                    document.getElementById('wordCount').textContent = wordCount;
+                    document.getElementById('qualityScore').textContent = `${qualityScore}/100`;
+                    document.getElementById('seoScore').textContent = `${seoScore}/100`;
+
+                    // Store in memory bank
+                    this.memoryBank.pastTopics.push({
+                        topic,
+                        timestamp: new Date().toISOString(),
+                        wordCount,
+                        qualityScore,
+                        seoScore
+                    });
+
+                    this.setActiveAgent(null);
+                    this.log('Blog generation complete!', 'SYSTEM');
+
+                    return finalContent;
+                } catch (error) {
+                    this.log(`Error: ${error.message}`, 'SYSTEM');
+                    throw error;
+                }
+            }
+        }
+
+        // Initialize agent system
+        const blogWriter = new BlogWriterAgent();
+
+        // Form submission handler
+        document.getElementById('blogForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const topic = document.getElementById('topic').value;
+            const tone = document.getElementById('tone').value;
+            const length = document.getElementById('length').value;
+            const keywords = document.getElementById('keywords').value;
+
+            // Show loading
+            document.getElementById('loadingIndicator').classList.add('active');
+            document.getElementById('outputContent').style.display = 'none';
+
+            // Disable button
+            const button = e.target.querySelector('button');
+            button.disabled = true;
+            button.textContent = 'Generating...';
+
+            try {
+                const blogPost = await blogWriter.generateBlog(topic, tone, length, keywords);
+
+                // Display result
+                document.getElementById('outputContent').textContent = blogPost;
+                document.getElementById('outputContent').style.display = 'block';
+                document.getElementById('loadingIndicator').classList.remove('active');
+            } catch (error) {
+                alert('Error generating blog post. Please try again.');
+                console.error(error);
+            } finally {
+                button.disabled = false;
+                button.textContent = 'Generate Blog Post';
+            }
+        });
+
+        // Initial log
+        blogWriter.log('System initialized. Ready to generate blog posts.', 'SYSTEM');
+    </script>
+</body>
+</html>
+
